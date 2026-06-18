@@ -1,25 +1,25 @@
 # Intent Diff
 
-PRやAIエージェントの作業について、「言っていること」と「実際に変えたこと」のズレを見つけるレビュー補助ツール。
+A review-orientation tool that compares what a PR says it is doing with what the diff actually changes.
 
 ## Core Idea
 
-普通のdiffはファイル差分を見る。AI PR reviewerはバグや改善点を見る。Intent Diffはその前に、PR本文、issue、依頼プロンプト、エージェント作業ログから「意図」を抽出し、実際の差分がその意図に沿っているかを見る。
+Traditional diffs show file changes. AI PR reviewers look for bugs, risks, and suggested improvements. Intent Diff sits one step earlier: it extracts the claimed intent from the PR description, linked issue, original prompt, commit messages, or agent session summary, then compares that intent with the actual behavioral changes implied by the diff.
 
-たとえば、PRが「リファクタのみ」と言っているのに認証挙動を変えている、または「UI文言修正」と言っているのにAPI契約を変えている、といったズレを日常レビューで早く見つける。
+For example, it should catch cases where a PR claims to be "refactor only" but changes authentication behavior, or where a "UI copy update" also changes an API contract. The goal is to help reviewers notice mismatches before they spend time reading every changed line.
 
 ## Why Now
 
-- AIエージェントがPRを高速に作るほど、レビュー担当者は「何を見ればいいか」を失いやすい。
-- 既存のAI PR reviewerは多いが、多くは欠陥検出や改善提案に寄っている。
-- これから必要になるのは、差分そのものより「作業意図と実装結果の整合性」を見るレイヤ。
+- As AI agents produce PRs faster, reviewers need better orientation before diving into the diff.
+- Existing AI PR reviewers mostly focus on defect detection, security issues, or improvement suggestions.
+- The missing layer is alignment between the intended work and the implemented result.
 
 ## Differentiation
 
-- Code review botではなく、review orientation tool。
-- Semantic diffではなく、intent-vs-behavior diff。
-- セキュリティ警告ではなく、日常レビューの注意配分を助ける。
-- AI生成PRだけでなく、人間のPRにも使える。
+- Not a code review bot: a review-orientation tool.
+- Not a semantic diff: an intent-vs-behavior diff.
+- Not primarily a security warning system: a daily attention-allocation aid for reviewers.
+- Useful for both AI-generated and human-authored PRs.
 
 ## Inputs
 
@@ -68,4 +68,3 @@ Potential mismatch:
 - Should the tool require an explicit PR template, or infer intent from messy text?
 - What mismatch categories are useful enough for daily review?
 - Can it be made cheap enough to run on every local diff before opening a PR?
-

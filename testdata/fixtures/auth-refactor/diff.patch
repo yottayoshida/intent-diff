@@ -1,0 +1,27 @@
+diff --git a/internal/auth/middleware.go b/internal/auth/middleware.go
+index 1234567..abcdefg 100644
+--- a/internal/auth/middleware.go
++++ b/internal/auth/middleware.go
+@@ -15,9 +15,10 @@
+ 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+ 		token := r.Header.Get("Authorization")
+-		if token == "" {
+-			http.Error(w, "unauthorized", http.StatusUnauthorized)
++		validatedToken, err := validateToken(token)
++		if err != nil {
++			http.Error(w, "unauthorized", http.StatusForbidden)
+ 			return
+ 		}
+-		ctx := context.WithValue(r.Context(), "user", token)
++		ctx := context.WithValue(r.Context(), "user", validatedToken)
+ 		next.ServeHTTP(w, r.WithContext(ctx))
+ 	})
+diff --git a/internal/auth/session.go b/internal/auth/session.go
+index 2345678..bcdefgh 100644
+--- a/internal/auth/session.go
++++ b/internal/auth/session.go
+@@ -8,3 +8,4 @@
+ 	session := getSession(r)
+ 	if session != nil {
++		session.Clear()
+ 		session.Invalidate()

@@ -1,0 +1,15 @@
+# Binary
+intent-diff
+dist/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+
+# Claude Code
+.mcp.json
+CLAUDE.local.md

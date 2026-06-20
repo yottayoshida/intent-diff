@@ -59,15 +59,16 @@ go build ./cmd/intent-diff
 go test -race ./...
 ```
 
-## Contributing
-
-If you'd like to contribute, please fork the repository and use a feature branch. Pull requests are warmly welcome.
-
 ## Links
 
 - Repository: https://github.com/yottayoshida/intent-diff
 - Issue tracker: https://github.com/yottayoshida/intent-diff/issues
 
-## Licensing
+## License
 
-The code in this project is licensed under [MIT license](LICENSE).
+Licensed under either of
+
+- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
+- MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
+
+at your option.

@@ -1,70 +1,116 @@
 # Intent Diff
 
-A review-orientation tool that compares what a PR says it is doing with what the diff actually changes.
+A review-triage tool that compares what a PR says it does with what the diff actually changes.
 
-## Core Idea
+Intent Diff extracts claimed intent from a PR description and compares it with implementation evidence from the git diff, producing a structured mismatch report with a 9-category taxonomy. It helps reviewers decide where to focus attention before reading every changed line.
 
-Traditional diffs show file changes. AI PR reviewers look for bugs, risks, and suggested improvements. Intent Diff sits one step earlier: it extracts the claimed intent from the PR description, linked issue, original prompt, commit messages, or agent session summary, then compares that intent with the actual behavioral changes implied by the diff.
+## Quick Start
 
-For example, it should catch cases where a PR claims to be "refactor only" but changes authentication behavior, or where a "UI copy update" also changes an API contract. The goal is to help reviewers notice mismatches before they spend time reading every changed line.
+```bash
+# Install
+go install github.com/yottayoshida/intent-diff/cmd/intent-diff@latest
 
-## Why Now
+# Analyze current branch against main
+intent-diff analyze --intent pr-description.md
 
-- As AI agents produce PRs faster, reviewers need better orientation before diving into the diff.
-- Existing AI PR reviewers mostly focus on defect detection, security issues, or improvement suggestions.
-- The missing layer is alignment between the intended work and the implemented result.
+# Use gh CLI output as input
+gh pr view --json title,body > pr.json
+intent-diff analyze --pr-json pr.json
 
-## Differentiation
+# Pipe PR description from stdin
+echo "Refactor auth middleware" | intent-diff analyze
 
-- Not a code review bot: a review-orientation tool.
-- Not a semantic diff: an intent-vs-behavior diff.
-- Not primarily a security warning system: a daily attention-allocation aid for reviewers.
-- Useful for both AI-generated and human-authored PRs.
+# Use a pre-generated diff file
+intent-diff analyze --intent pr.md --diff-file changes.patch
 
-## Inputs
+# Output as JSON
+intent-diff analyze --intent pr.md --json
 
-- PR title and description.
-- Linked issue or task.
-- Agent prompt or session summary when available.
-- Commit messages.
-- Git diff.
-- Optional local repo context.
+# Save to file
+intent-diff analyze --intent pr.md --out report.md
+```
 
-## Outputs
+## How It Works
 
-- Claimed intent.
-- Observed behavior changes.
-- Alignment score.
-- Suspicious mismatches.
-- Reviewer focus areas.
-- Suggested PR description corrections.
+1. **Collect**: Reads PR description and git diff, classifies files (source/test/config/docs/generated/vendor/lockfile), tags risk levels (auth > api > data > infra > other), and truncates to fit within the analysis budget.
+2. **Analyze**: Sends structured prompt to Claude via `claude --bare -p` with JSON schema enforcement. Produces a 9-category mismatch analysis.
+3. **Render**: Outputs human-readable Markdown or machine-readable JSON.
 
-## Example
+## Mismatch Taxonomy
 
-Claimed intent:
+| Category | Description |
+|----------|-------------|
+| `scope` | Changes exceed or fall short of claimed scope |
+| `contract` | API contracts, interfaces, or type signatures changed without mention |
+| `risk` | Security, auth, or data-handling changes not documented |
+| `test` | Test changes that don't match claimed testing scope |
+| `intent_under_specification` | PR description too vague to assess alignment |
+| `non_code_impact` | Config, infra, or deployment changes not mentioned |
+| `behavioral_ambiguity` | Changes with unclear behavioral impact |
+| `documentation` | Documentation doesn't reflect implementation |
+| `dependency_risk` | Dependency changes with unmentioned implications |
 
-- Refactor auth middleware without behavior changes.
+## Grade Scale
 
-Observed changes:
+| Grade | Meaning |
+|-------|---------|
+| A | Well-aligned: no material mismatches |
+| B | Minor omissions: small gaps but no risk-bearing changes undocumented |
+| C | Material omissions: risk-bearing changes not mentioned |
+| D | Significant mismatches: explicit claims contradicted by evidence |
+| E | Critical mismatches: safety/auth/data changes undocumented |
 
-- Token expiry handling changed.
-- Logout path now clears session earlier.
-- Error response status changed from 401 to 403 in one branch.
+## Configuration
 
-Potential mismatch:
+Create `.intent-diff.yml` in your project root:
 
-- This is not a pure refactor. Review auth edge cases and update PR description.
+```yaml
+# Glob patterns to exclude from analysis
+ignore:
+  - "**/*.generated.go"
+  - "vendor/**"
 
-## First Prototype
+# Maximum diff size in characters (default: 100000)
+max_diff_size: 100000
 
-1. CLI reads current git diff and PR description markdown.
-2. LLM produces intent, observed behavior, mismatch list.
-3. Output as local markdown.
-4. Later: GitHub Action that comments on PRs.
+# Output format: "markdown" or "json" (default: "markdown")
+output_format: markdown
+```
 
-## Open Questions
+## Requirements
 
-- Can AST diff tools such as Difftastic provide structured signals before calling an LLM?
-- Should the tool require an explicit PR template, or infer intent from messy text?
-- What mismatch categories are useful enough for daily review?
-- Can it be made cheap enough to run on every local diff before opening a PR?
+- [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code/overview) (`claude` command in PATH)
+- Git repository
+
+## CLI Reference
+
+```
+intent-diff analyze [flags]
+
+Flags:
+  --base string        base ref for git diff (default: merge-base with main)
+  --head string        head ref for git diff (default: HEAD)
+  --diff-file string   path to a pre-generated diff file
+  --intent string      path to a PR description markdown file
+  --pr-json string     path to gh pr view --json title,body output
+  --out string         output file path (default: stdout)
+  --json               output as JSON instead of Markdown
+  --force              force LLM analysis even for minimal diffs
+```
+
+## Development
+
+```bash
+# Build
+go build ./cmd/intent-diff
+
+# Test
+go test -race ./...
+
+# Lint
+golangci-lint run
+```
+
+## License
+
+MIT

@@ -1,0 +1,20 @@
+diff --git a/go.mod b/go.mod
+index 1234567..abcdefg 100644
+--- a/go.mod
++++ b/go.mod
+@@ -5,3 +5,3 @@
+ require (
+-	github.com/lib/pq v1.10.0
++	github.com/lib/pq v1.10.9
+ 	github.com/gorilla/mux v1.8.0
+diff --git a/go.sum b/go.sum
+index 2345678..bcdefgh 100644
+--- a/go.sum
++++ b/go.sum
+@@ -10,4 +10,4 @@
+-github.com/lib/pq v1.10.0 h1:abc123
+-github.com/lib/pq v1.10.0/go.mod h1:def456
++github.com/lib/pq v1.10.9 h1:xyz789
++github.com/lib/pq v1.10.9/go.mod h1:uvw012
+ github.com/gorilla/mux v1.8.0 h1:ghi789
+ github.com/gorilla/mux v1.8.0/go.mod h1:jkl012

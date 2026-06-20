@@ -1,0 +1,45 @@
+diff --git a/internal/cache/redis.go b/internal/cache/redis.go
+new file mode 100644
+index 0000000..1234567
+--- /dev/null
++++ b/internal/cache/redis.go
+@@ -0,0 +1,22 @@
++package cache
++
++import (
++	"context"
++	"time"
++)
++
++type RedisCache struct {
++	ttl time.Duration
++}
++
++func (c *RedisCache) Get(ctx context.Context, key string) (string, error) {
++	return "", nil
++}
++
++func (c *RedisCache) Set(ctx context.Context, key, value string) error {
++	return nil
++}
++
++func (c *RedisCache) Delete(ctx context.Context, key string) error {
++	return nil
++}
+diff --git a/internal/service/user.go b/internal/service/user.go
+index 3456789..cdefghi 100644
+--- a/internal/service/user.go
++++ b/internal/service/user.go
+@@ -8,3 +8,11 @@
+ func (s *UserService) GetProfile(id string) (*User, error) {
+-	return s.db.FindUser(id)
++	cached, err := s.cache.Get(context.Background(), "user:"+id)
++	if err == nil {
++		return unmarshalUser(cached), nil
++	}
++	user, err := s.db.FindUser(id)
++	if err != nil {
++		return nil, err
++	}
++	return user, nil
+ }

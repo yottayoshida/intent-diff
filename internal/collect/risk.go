@@ -37,8 +37,8 @@ var apiPatterns = []string{
 
 var dataPatterns = []string{
 	"migration", "schema", "model", "entity",
-	"database", "db/", "store", "repository",
-	"query", "sql",
+	"database", "db/", "/store", "repository",
+	"/query", "sql",
 }
 
 var infraPatterns = []string{

@@ -42,7 +42,7 @@ func ParseDiffFromGit(base, head string) ([]*gitdiff.File, error) {
 		base = mb
 	}
 
-	cmd := exec.Command("git", "diff", "--", base+".."+head)
+	cmd := exec.Command("git", "diff", base+".."+head)
 	out, err := cmd.Output()
 	if err != nil {
 		return nil, fmt.Errorf("git diff %s..%s: %w", base, head, err)

@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/yottayoshida/intent-diff/internal/analyze"
@@ -81,8 +82,8 @@ func runAnalyze(cmd *cobra.Command, args []string) error {
 	case flagPRJSON != "":
 		intent, intentSource, err = collect.ReadIntentFromPRJSON(flagPRJSON)
 	default:
-		stat, _ := os.Stdin.Stat()
-		if (stat.Mode() & os.ModeCharDevice) == 0 {
+		stat, statErr := os.Stdin.Stat()
+		if statErr == nil && (stat.Mode()&os.ModeCharDevice) == 0 {
 			intent, intentSource, err = collect.ReadIntentFromStdin(os.Stdin)
 		} else {
 			intent = ""
@@ -179,8 +180,11 @@ func runAnalyze(cmd *cobra.Command, args []string) error {
 	prompt := analyze.BuildPrompt(cr)
 	schema := analyze.JSONSchema()
 
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+
 	runner := &analyze.ExecClaudeRunner{}
-	result, err := runner.Run(context.Background(), prompt, schema)
+	result, err := runner.Run(ctx, prompt, schema)
 	if err != nil {
 		return fmt.Errorf("analysis failed: %w", err)
 	}

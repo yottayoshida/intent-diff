@@ -76,21 +76,25 @@ func renderAttentionMap(w io.Writer, items []analyze.AttentionItem) {
 	fmt.Fprintf(w, "| Priority | File | Reason |\n")
 	fmt.Fprintf(w, "|----------|------|--------|\n")
 	for _, item := range items {
-		fmt.Fprintf(w, "| %s | `%s` | %s |\n", item.Priority, item.File, item.Reason)
+		fmt.Fprintf(w, "| %s | `%s` | %s |\n", escPipe(item.Priority), item.File, escPipe(item.Reason))
 	}
 	fmt.Fprintf(w, "\n")
+}
+
+func escPipe(s string) string {
+	return strings.ReplaceAll(s, "|", "\\|")
 }
 
 func renderMismatches(w io.Writer, mismatches []analyze.Mismatch) {
 	fmt.Fprintf(w, "## Mismatches (%d)\n\n", len(mismatches))
 	for i, m := range mismatches {
 		fmt.Fprintf(w, "### %d. [%s] %s (severity: %s, confidence: %s)\n\n",
-			i+1, m.Category, m.Claim, m.Severity, m.Confidence)
-		fmt.Fprintf(w, "**Observation**: %s\n\n", m.Observation)
+			i+1, escPipe(string(m.Category)), escPipe(m.Claim), escPipe(string(m.Severity)), escPipe(string(m.Confidence)))
+		fmt.Fprintf(w, "**Observation**: %s\n\n", escPipe(m.Observation))
 		if len(m.Evidence) > 0 {
 			fmt.Fprintf(w, "**Evidence**: %s\n\n", strings.Join(m.Evidence, ", "))
 		}
-		fmt.Fprintf(w, "**Recommended action**: %s\n\n", m.RecommendedAction)
+		fmt.Fprintf(w, "**Recommended action**: %s\n\n", escPipe(m.RecommendedAction))
 	}
 }
 

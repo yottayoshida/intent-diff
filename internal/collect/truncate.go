@@ -2,6 +2,7 @@ package collect
 
 import (
 	"sort"
+	"unicode/utf8"
 )
 
 const DefaultBudgetChars = 100_000
@@ -56,7 +57,11 @@ func TruncateFiles(files []ChangedFile, budget int) (included []ChangedFile, exc
 
 		remaining := budget - usedChars
 		if remaining > 0 {
-			incl[i].HunkText = incl[i].HunkText[:remaining] + "\n... (truncated)"
+			cut := remaining
+			for cut > 0 && !utf8.RuneStart(incl[i].HunkText[cut]) {
+				cut--
+			}
+			incl[i].HunkText = incl[i].HunkText[:cut] + "\n... (truncated)"
 			incl[i].Truncated = true
 			usedChars = budget
 		} else {

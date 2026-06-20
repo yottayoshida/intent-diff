@@ -46,7 +46,7 @@ func init() {
 	analyzeCmd.Flags().BoolVar(&flagJSON, "json", false, "output as JSON instead of Markdown")
 	analyzeCmd.Flags().BoolVar(&flagForce, "force", false, "force LLM analysis even for minimal diffs")
 	analyzeCmd.Flags().BoolVar(&flagDumpCollect, "dump-collect", false, "dump intermediate collect-stage JSON for debugging")
-	analyzeCmd.Flags().MarkHidden("dump-collect")
+	_ = analyzeCmd.Flags().MarkHidden("dump-collect")
 }
 
 const minimalDiffThreshold = 5
@@ -139,8 +139,7 @@ func runAnalyze(cmd *cobra.Command, args []string) error {
 	if flagDumpCollect {
 		enc := json.NewEncoder(os.Stderr)
 		enc.SetIndent("", "  ")
-		enc.Encode(cr)
-		return nil
+		return enc.Encode(cr)
 	}
 
 	// --- Minimal diff shortcut ---
@@ -172,7 +171,6 @@ func runAnalyze(cmd *cobra.Command, args []string) error {
 		diffText := collectDiffText(included)
 		if collect.IsCopyPasteIntent(intent, diffText) {
 			fmt.Fprintf(os.Stderr, "Warning: PR description appears to be a copy of the diff. Treating as empty intent.\n")
-			intent = ""
 			cr.Intent = ""
 		}
 	}

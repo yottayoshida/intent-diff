@@ -36,7 +36,9 @@ ignore:
 max_diff_size: 50000
 output_format: json
 `
-	os.WriteFile(path, []byte(content), 0o644)
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
 
 	cfg, err := Load(path)
 	if err != nil {
@@ -61,7 +63,9 @@ ignore:
   - "vendor/**"
   - "*.lock"
 `
-	os.WriteFile(path, []byte(content), 0o644)
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
 
 	cfg, err := Load(path)
 	if err != nil {
@@ -87,7 +91,9 @@ ignore:
 func TestLoad_InvalidYAML(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, ".intent-diff.yml")
-	os.WriteFile(path, []byte("invalid: [yaml: {broken"), 0o644)
+	if err := os.WriteFile(path, []byte("invalid: [yaml: {broken"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 
 	_, err := Load(path)
 	if err == nil {

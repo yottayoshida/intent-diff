@@ -10,7 +10,9 @@ import (
 func TestReadIntentFromFile(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "pr.md")
-	os.WriteFile(path, []byte("# Fix auth bug\n\nThis PR fixes the session timeout."), 0o644)
+	if err := os.WriteFile(path, []byte("# Fix auth bug\n\nThis PR fixes the session timeout."), 0o644); err != nil {
+		t.Fatal(err)
+	}
 
 	intent, source, err := ReadIntentFromFile(path)
 	if err != nil {
@@ -27,7 +29,9 @@ func TestReadIntentFromFile(t *testing.T) {
 func TestReadIntentFromPRJSON(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "pr.json")
-	os.WriteFile(path, []byte(`{"title":"Fix auth","body":"Fixes session handling."}`), 0o644)
+	if err := os.WriteFile(path, []byte(`{"title":"Fix auth","body":"Fixes session handling."}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
 
 	intent, source, err := ReadIntentFromPRJSON(path)
 	if err != nil {

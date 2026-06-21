@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.1] - 2026-06-21
+
+**Summary**: CI runner strategy established — Claude Code CLI as the sole runner for both local and CI environments.
+
+### Changed
+
+- JSON schema version field from `const` to `enum` for broader structured-output tool compatibility
+- PreflightCheck error messages now include 3-layer guidance: what happened, current state, and what to do (with CI-specific install instructions)
+
+### Added
+
+- ADR-0001 documenting the CLI runner strategy decision (no Anthropic Go SDK, no API billing)
+- CI setup documentation (`docs/ci.md`) with GitHub Actions workflow example, failure modes, and security notes
+- 8 new tests for schema validation and PreflightCheck error messages
+
 ## [0.1.0] - 2026-06-20
 
 **Summary**: Initial release — PR description vs git diff structured comparison CLI.
@@ -26,4 +41,5 @@ All notable changes to this project will be documented in this file.
 - Minimal diff shortcut (≤5 lines → Grade A without LLM call)
 - goreleaser configuration for cross-platform binary distribution
 
+[0.1.1]: https://github.com/yottayoshida/intent-diff/releases/tag/v0.1.1
 [0.1.0]: https://github.com/yottayoshida/intent-diff/releases/tag/v0.1.0

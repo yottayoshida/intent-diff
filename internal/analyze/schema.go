@@ -75,7 +75,8 @@ func JSONSchema() string {
   "properties": {
     "version": {
       "type": "string",
-      "const": "0.1"
+      "enum": ["0.1"],
+      "description": "Schema version. Uses enum (not const) for broader structured-output tool compatibility."
     },
     "alignment": {
       "type": "object",

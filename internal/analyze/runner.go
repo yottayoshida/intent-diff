@@ -61,18 +61,25 @@ func (r *MockClaudeRunner) Run(ctx context.Context, prompt string, schema string
 func PreflightCheck() error {
 	path, err := exec.LookPath("claude")
 	if err != nil {
-		return fmt.Errorf("claude CLI not found in PATH. Install from https://docs.anthropic.com/en/docs/claude-code/overview")
+		return fmt.Errorf("claude CLI not found in PATH.\n\n" +
+			"intent-diff requires Claude Code CLI to run analysis.\n\n" +
+			"  Local install:  npm install -g @anthropic-ai/claude-code\n" +
+			"  CI (GitHub Actions): add a step with 'npm install -g @anthropic-ai/claude-code'\n" +
+			"    and set the ANTHROPIC_API_KEY secret.\n\n" +
+			"Docs: https://docs.anthropic.com/en/docs/claude-code/overview")
 	}
 
 	cmd := exec.Command(path, "--version")
 	out, err := cmd.Output()
 	if err != nil {
-		return fmt.Errorf("could not determine claude version: %w", err)
+		return fmt.Errorf("claude CLI found at %s but 'claude --version' failed: %w\n\n"+
+			"Try reinstalling: npm install -g @anthropic-ai/claude-code", path, err)
 	}
 
 	version := strings.TrimSpace(string(out))
 	if version == "" {
-		return fmt.Errorf("claude --version returned empty output")
+		return fmt.Errorf("claude CLI found at %s but --version returned empty output.\n\n"+
+			"Try reinstalling: npm install -g @anthropic-ai/claude-code", path)
 	}
 
 	return nil

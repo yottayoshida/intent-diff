@@ -2,22 +2,22 @@ package analyze
 
 // AnalysisResult is the top-level structured output from the LLM.
 type AnalysisResult struct {
-	Version    string      `json:"version"`
-	Alignment  Alignment   `json:"alignment"`
-	ClaimedIntent string  `json:"claimed_intent"`
-	ImplementationEvidence []Evidence  `json:"implementation_evidence"`
-	BehaviorImpactHypotheses []Hypothesis `json:"behavior_impact_hypotheses"`
-	Mismatches []Mismatch  `json:"mismatches"`
-	AttentionMap []AttentionItem `json:"attention_map"`
-	SuggestedPRDescription string `json:"suggested_pr_description"`
+	Version                  string          `json:"version"`
+	Alignment                Alignment       `json:"alignment"`
+	ClaimedIntent            string          `json:"claimed_intent"`
+	ImplementationEvidence   []Evidence      `json:"implementation_evidence"`
+	BehaviorImpactHypotheses []Hypothesis    `json:"behavior_impact_hypotheses"`
+	Mismatches               []Mismatch      `json:"mismatches"`
+	AttentionMap             []AttentionItem `json:"attention_map"`
+	SuggestedPRDescription   string          `json:"suggested_pr_description"`
 }
 
 // Alignment represents the overall alignment assessment.
 type Alignment struct {
-	Grade              string  `json:"grade"`
-	Score              float64 `json:"score"`
-	Confidence         string  `json:"confidence"`
-	HighestRiskCategory string `json:"highest_risk_category"`
+	Grade               string  `json:"grade"`
+	Score               float64 `json:"score"`
+	Confidence          string  `json:"confidence"`
+	HighestRiskCategory string  `json:"highest_risk_category"`
 }
 
 // Evidence represents a piece of implementation evidence from the diff.
@@ -29,24 +29,24 @@ type Evidence struct {
 
 // Hypothesis represents a behavior-impact hypothesis that needs verification.
 type Hypothesis struct {
-	Description      string `json:"description"`
+	Description      string   `json:"description"`
 	AffectedFiles    []string `json:"affected_files"`
-	VerificationHint string `json:"verification_hint"`
+	VerificationHint string   `json:"verification_hint"`
 }
 
 // MismatchCategory enumerates the 9-category taxonomy.
 type MismatchCategory string
 
 const (
-	MismatchScope                MismatchCategory = "scope"
-	MismatchContract             MismatchCategory = "contract"
-	MismatchRisk                 MismatchCategory = "risk"
-	MismatchTest                 MismatchCategory = "test"
-	MismatchIntentUnderSpec      MismatchCategory = "intent_under_specification"
-	MismatchNonCodeImpact        MismatchCategory = "non_code_impact"
-	MismatchBehavioralAmbiguity  MismatchCategory = "behavioral_ambiguity"
-	MismatchDocumentation        MismatchCategory = "documentation"
-	MismatchDependencyRisk       MismatchCategory = "dependency_risk"
+	MismatchScope               MismatchCategory = "scope"
+	MismatchContract            MismatchCategory = "contract"
+	MismatchRisk                MismatchCategory = "risk"
+	MismatchTest                MismatchCategory = "test"
+	MismatchIntentUnderSpec     MismatchCategory = "intent_under_specification"
+	MismatchNonCodeImpact       MismatchCategory = "non_code_impact"
+	MismatchBehavioralAmbiguity MismatchCategory = "behavioral_ambiguity"
+	MismatchDocumentation       MismatchCategory = "documentation"
+	MismatchDependencyRisk      MismatchCategory = "dependency_risk"
 )
 
 // Mismatch represents a single detected mismatch.

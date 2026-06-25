@@ -3,7 +3,9 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+	"time"
 )
 
 func TestDefaultConfig(t *testing.T) {
@@ -98,5 +100,106 @@ func TestLoad_InvalidYAML(t *testing.T) {
 	_, err := Load(path)
 	if err == nil {
 		t.Error("expected error for invalid YAML")
+	}
+}
+
+func TestResolveTimeout_Default(t *testing.T) {
+	cfg := DefaultConfig()
+	d, err := cfg.ResolveTimeout()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d != 5*time.Minute {
+		t.Errorf("expected 5m, got %s", d)
+	}
+}
+
+func TestResolveTimeout_Parsing(t *testing.T) {
+	cfg := &Config{Timeout: "2m"}
+	d, err := cfg.ResolveTimeout()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d != 2*time.Minute {
+		t.Errorf("expected 2m, got %s", d)
+	}
+}
+
+func TestResolveTimeout_Invalid(t *testing.T) {
+	cfg := &Config{Timeout: "abc"}
+	_, err := cfg.ResolveTimeout()
+	if err == nil {
+		t.Error("expected error for invalid timeout")
+	}
+	if !strings.Contains(err.Error(), "invalid timeout") {
+		t.Errorf("expected 'invalid timeout' in error, got: %s", err)
+	}
+}
+
+func TestResolveTimeout_OutOfRange(t *testing.T) {
+	tests := []struct {
+		name    string
+		timeout string
+	}{
+		{"below min", "10s"},
+		{"above max", "1h"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &Config{Timeout: tt.timeout}
+			_, err := cfg.ResolveTimeout()
+			if err == nil {
+				t.Error("expected error for out-of-range timeout")
+			}
+			if !strings.Contains(err.Error(), "out of range") {
+				t.Errorf("expected 'out of range' in error, got: %s", err)
+			}
+		})
+	}
+}
+
+func TestResolveTimeout_BoundaryValues(t *testing.T) {
+	tests := []struct {
+		timeout string
+		want    time.Duration
+	}{
+		{"30s", 30 * time.Second},
+		{"30m", 30 * time.Minute},
+	}
+	for _, tt := range tests {
+		t.Run(tt.timeout, func(t *testing.T) {
+			cfg := &Config{Timeout: tt.timeout}
+			d, err := cfg.ResolveTimeout()
+			if err != nil {
+				t.Fatalf("boundary value %s should be valid: %v", tt.timeout, err)
+			}
+			if d != tt.want {
+				t.Errorf("expected %s, got %s", tt.want, d)
+			}
+		})
+	}
+}
+
+func TestLoad_WithTimeout(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, ".intent-diff.yml")
+	content := `timeout: "3m"`
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Timeout != "3m" {
+		t.Errorf("expected timeout 3m, got %s", cfg.Timeout)
+	}
+	d, err := cfg.ResolveTimeout()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d != 3*time.Minute {
+		t.Errorf("expected 3m duration, got %s", d)
 	}
 }

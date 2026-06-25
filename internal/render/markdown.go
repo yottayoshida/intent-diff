@@ -9,11 +9,22 @@ import (
 )
 
 // RenderMarkdown writes a human-readable Markdown report to w.
-func RenderMarkdown(w io.Writer, result *analyze.AnalysisResult, issues []analyze.ValidationIssue) error {
+func RenderMarkdown(w io.Writer, result *analyze.AnalysisResult, issues []analyze.ValidationIssue, meta RenderMetadata) error {
 	fmt.Fprintf(w, "# Intent Diff Report\n\n")
 
 	renderGradeBadge(w, result.Alignment)
 	fmt.Fprintf(w, "\n")
+
+	if meta.Truncated || len(meta.ExcludedFiles) > 0 {
+		fmt.Fprintf(w, "> **Partial analysis**: %d of %d files were analyzed.\n", meta.FilesAnalyzed, meta.FilesTotal)
+		if len(meta.ExcludedFiles) > 0 {
+			fmt.Fprintf(w, "> %d file(s) were excluded (exceeded budget of %d chars).\n", len(meta.ExcludedFiles), meta.BudgetChars)
+		}
+		if len(meta.TruncatedFiles) > 0 {
+			fmt.Fprintf(w, "> %d file(s) were partially truncated: %s\n", len(meta.TruncatedFiles), strings.Join(meta.TruncatedFiles, ", "))
+		}
+		fmt.Fprintf(w, "> To analyze the full diff, increase `max_diff_size` in `.intent-diff.yml`.\n\n")
+	}
 
 	if len(issues) > 0 {
 		fmt.Fprintf(w, "> **Warning**: %d validation issue(s) detected (possible hallucination). See details below.\n\n", len(issues))

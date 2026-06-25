@@ -116,7 +116,9 @@ func runAnalyze(cmd *cobra.Command, args []string) error {
 
 	// --- Collect: Truncate ---
 	included, truncationExcluded, truncated := collect.TruncateFiles(files, cfg.MaxDiffSize)
-	allExcluded := append(truncationExcluded, ignoredFiles...)
+	allExcluded := make([]string, 0, len(truncationExcluded)+len(ignoredFiles))
+	allExcluded = append(allExcluded, truncationExcluded...)
+	allExcluded = append(allExcluded, ignoredFiles...)
 
 	totalAdded, totalDeleted := 0, 0
 	totalDiffChars := 0
@@ -159,9 +161,9 @@ func runAnalyze(cmd *cobra.Command, args []string) error {
 		result := &analyze.AnalysisResult{
 			Version: "0.1",
 			Alignment: analyze.Alignment{
-				Grade:              "A",
-				Score:              1.0,
-				Confidence:         "high",
+				Grade:               "A",
+				Score:               1.0,
+				Confidence:          "high",
 				HighestRiskCategory: "none",
 			},
 			ClaimedIntent:          intent,

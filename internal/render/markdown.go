@@ -15,10 +15,14 @@ func RenderMarkdown(w io.Writer, result *analyze.AnalysisResult, issues []analyz
 	renderGradeBadge(w, result.Alignment)
 	fmt.Fprintf(w, "\n")
 
-	if meta.Truncated {
-		excluded := len(meta.TruncatedFiles) + len(meta.ExcludedFiles)
-		fmt.Fprintf(w, "> **Partial analysis**: The diff exceeded the analysis budget (%d chars).\n", meta.BudgetChars)
-		fmt.Fprintf(w, "> %d of %d files were analyzed; %d file(s) were excluded or truncated.\n", meta.FilesAnalyzed, meta.FilesTotal, excluded)
+	if meta.Truncated || len(meta.ExcludedFiles) > 0 {
+		fmt.Fprintf(w, "> **Partial analysis**: %d of %d files were analyzed.\n", meta.FilesAnalyzed, meta.FilesTotal)
+		if len(meta.ExcludedFiles) > 0 {
+			fmt.Fprintf(w, "> %d file(s) were excluded (exceeded budget of %d chars).\n", len(meta.ExcludedFiles), meta.BudgetChars)
+		}
+		if len(meta.TruncatedFiles) > 0 {
+			fmt.Fprintf(w, "> %d file(s) were partially truncated: %s\n", len(meta.TruncatedFiles), strings.Join(meta.TruncatedFiles, ", "))
+		}
 		fmt.Fprintf(w, "> To analyze the full diff, increase `max_diff_size` in `.intent-diff.yml`.\n\n")
 	}
 

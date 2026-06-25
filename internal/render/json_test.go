@@ -12,9 +12,9 @@ func TestRenderJSON_ValidOutput(t *testing.T) {
 	result := &analyze.AnalysisResult{
 		Version: "0.1",
 		Alignment: analyze.Alignment{
-			Grade:              "A",
-			Score:              1.0,
-			Confidence:         "high",
+			Grade:               "A",
+			Score:               1.0,
+			Confidence:          "high",
 			HighestRiskCategory: "none",
 		},
 		ClaimedIntent:          "Test PR",

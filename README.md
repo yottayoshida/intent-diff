@@ -4,6 +4,14 @@
 
 Intent Diff extracts claimed intent from a PR description and compares it with implementation evidence from the git diff. It produces a structured mismatch report with a Grade A–E scale and an attention map, helping reviewers decide where to focus before reading every changed line.
 
+## How it works
+
+Intent Diff runs a 3-stage pipeline:
+
+1. **Collect** — Parse the git diff and PR description. Classify files by role (source, test, config, docs, etc.) and tag risk levels (auth, api, data, infra). Truncate large diffs by risk priority.
+2. **Analyze** — Send the structured prompt to Claude CLI (`claude --bare -p`) with a JSON schema. The LLM compares claimed intent against implementation evidence and returns a structured analysis.
+3. **Render** — Format the analysis as Markdown (human-readable) or JSON (machine-readable) with Grade badge, Attention Map, Mismatch taxonomy, and validation warnings.
+
 ## Installing / Getting started
 
 ```shell
@@ -12,15 +20,56 @@ go install github.com/yottayoshida/intent-diff/cmd/intent-diff@latest
 
 Requires [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code/overview) (`claude` command in PATH) and a git repository.
 
+## Examples
+
+### Basic usage
+
 ```shell
-# Analyze current branch against main
+# Analyze current branch against main using gh CLI
 gh pr view --json title,body | intent-diff analyze --pr-json /dev/stdin
 
-# Or use a markdown file as PR description
+# Use a markdown file as PR description
 intent-diff analyze --intent pr-description.md
 
 # Output as JSON
 intent-diff analyze --pr-json pr.json --json --out report.json
+
+# Custom base/head refs
+intent-diff analyze --base origin/develop --head feature/auth --intent desc.md
+
+# Use a pre-generated diff file
+intent-diff analyze --diff-file changes.diff --intent desc.md
+```
+
+### Sample output
+
+```
+# Intent Diff Report
+
+**Grade: C** — Material omissions (confidence: high, score: 0.45)
+
+> **Partial analysis**: The diff exceeded the analysis budget (100000 chars).
+> 42 of 58 files were analyzed; 16 file(s) were excluded or truncated.
+> To analyze the full diff, increase `max_diff_size` in `.intent-diff.yml`.
+
+## Claimed Intent
+
+Refactor auth middleware for readability
+
+## Attention Map
+
+| Priority | File | Reason |
+|----------|------|--------|
+| high | `auth/session.go` | Session expiry logic changed |
+| medium | `api/handler.go` | New error code added |
+
+## Mismatches (1)
+
+### 1. [contract] Auth session expiry changed (severity: high, confidence: high)
+
+**Observation**: Session timeout reduced from 24h to 1h
+**Evidence**: auth/session.go
+**Recommended action**: Update PR description to disclose session expiry change
 ```
 
 ## Features
@@ -29,8 +78,9 @@ intent-diff analyze --pr-json pr.json --json --out report.json
 * **Grade A–E** — from well-aligned to critical mismatches
 * **Attention map** — prioritized list of files to review first
 * **Structured output** — Markdown for humans, JSON for CI
-* **Smart diff handling** — file classification, risk-based prioritization, truncation for large diffs
+* **Smart diff handling** — file classification (8 categories), risk-based prioritization (5 levels), truncation for large diffs with partial analysis warnings
 * **Prompt injection defense** — XML data boundaries, `--json-schema` enforcement, post-hoc file path validation
+* **Configurable timeout** — `--timeout` flag and config file support with 30s–30min bounds
 
 ## Configuration
 
@@ -42,6 +92,7 @@ ignore:
   - "vendor/**"
 max_diff_size: 100000
 output_format: markdown
+timeout: "5m"
 ```
 
 | Key | Type | Default | Description |
@@ -49,6 +100,26 @@ output_format: markdown
 | `ignore` | `[]string` | `[]` | Glob patterns to exclude from analysis |
 | `max_diff_size` | `int` | `100000` | Maximum diff size in characters |
 | `output_format` | `string` | `"markdown"` | `"markdown"` or `"json"` |
+| `timeout` | `string` | `"5m"` | Analysis timeout (e.g. `"2m"`, `"10m"`); range: 30s–30m |
+
+The `--timeout` CLI flag overrides the config file value.
+
+## Troubleshooting
+
+**Analysis times out**: Large diffs take longer to analyze. Increase the timeout with `--timeout 10m` or reduce diff size with `ignore` patterns in `.intent-diff.yml`.
+
+**Partial analysis warning**: When the diff exceeds `max_diff_size`, lower-risk files are excluded. The report shows how many files were analyzed. Increase `max_diff_size` or add `ignore` patterns for generated/vendor files.
+
+**`claude` command not found**: Intent Diff requires [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code/overview) installed and available in PATH. See [docs/ci.md](docs/ci.md) for CI environment setup.
+
+**Low confidence grades**: The LLM analysis is probabilistic. Low confidence often means the PR description is vague or the diff is very large. Consider improving the PR description or using `--force` for minimal diffs.
+
+## Limitations
+
+- **Large diffs are truncated**: Diffs exceeding `max_diff_size` are truncated by risk priority. High-risk files (auth, API) are kept; low-risk files (docs, generated) are excluded first. The report discloses when truncation occurred.
+- **LLM-dependent**: Results are hypotheses based on LLM analysis, not verified facts. The post-hoc validator catches some hallucinations (e.g., file paths not in the diff), but human judgment is still required.
+- **No incremental analysis**: Each run analyzes the full diff. There is no caching or delta analysis between runs.
+- **Single LLM backend**: Currently requires Claude Code CLI. No API key mode or alternative LLM backends (see [ADR-0001](docs/adr/0001-cli-runner-strategy.md)).
 
 ## Developing
 

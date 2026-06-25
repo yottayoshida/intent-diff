@@ -30,6 +30,7 @@ var (
 	flagIntent      string
 	flagPRJSON      string
 	flagOut         string
+	flagTimeout     time.Duration
 	flagJSON        bool
 	flagForce       bool
 	flagDumpCollect bool
@@ -46,6 +47,7 @@ func init() {
 	analyzeCmd.Flags().StringVar(&flagOut, "out", "", "output file path (default: stdout)")
 	analyzeCmd.Flags().BoolVar(&flagJSON, "json", false, "output as JSON instead of Markdown")
 	analyzeCmd.Flags().BoolVar(&flagForce, "force", false, "force LLM analysis even for minimal diffs")
+	analyzeCmd.Flags().DurationVar(&flagTimeout, "timeout", config.DefaultTimeout, "analysis timeout (e.g. 2m, 10m); range: 30s-30m")
 	analyzeCmd.Flags().BoolVar(&flagDumpCollect, "dump-collect", false, "dump intermediate collect-stage JSON for debugging")
 	_ = analyzeCmd.Flags().MarkHidden("dump-collect")
 }
@@ -143,6 +145,15 @@ func runAnalyze(cmd *cobra.Command, args []string) error {
 		return enc.Encode(cr)
 	}
 
+	meta := render.RenderMetadata{
+		Truncated:      truncated,
+		TruncatedFiles: collectTruncatedFileNames(included),
+		ExcludedFiles:  excluded,
+		FilesAnalyzed:  len(included),
+		FilesTotal:     len(included) + len(excluded) - len(ignoredFiles),
+		BudgetChars:    cfg.MaxDiffSize,
+	}
+
 	// --- Minimal diff shortcut ---
 	if totalAdded+totalDeleted <= minimalDiffThreshold && !flagForce {
 		result := &analyze.AnalysisResult{
@@ -157,7 +168,7 @@ func runAnalyze(cmd *cobra.Command, args []string) error {
 			SuggestedPRDescription: intent,
 		}
 		fmt.Fprintf(os.Stderr, "Changes are minimal (%d lines). Skipping LLM analysis. Use --force to override.\n", totalAdded+totalDeleted)
-		return writeOutput(result, nil, cfg)
+		return writeOutput(result, nil, cfg, meta)
 	}
 
 	// --- Pre-flight ---
@@ -176,16 +187,26 @@ func runAnalyze(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	// --- Resolve timeout ---
+	timeout, err := resolveTimeout(cmd, cfg)
+	if err != nil {
+		return err
+	}
+
 	// --- Analyze ---
 	prompt := analyze.BuildPrompt(cr)
 	schema := analyze.JSONSchema()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
 	runner := &analyze.ExecClaudeRunner{}
 	result, err := runner.Run(ctx, prompt, schema)
 	if err != nil {
+		if ctx.Err() == context.DeadlineExceeded {
+			return fmt.Errorf("analysis timed out after %s\nThe diff contained %d files (%d chars).\nTry: increase timeout with --timeout 10m, or reduce diff size with ignore patterns in .intent-diff.yml",
+				timeout, len(included), totalDiffChars)
+		}
 		return fmt.Errorf("analysis failed: %w", err)
 	}
 
@@ -196,10 +217,10 @@ func runAnalyze(cmd *cobra.Command, args []string) error {
 	}
 	issues := analyze.ValidateResult(result, diffFiles)
 
-	return writeOutput(result, issues, cfg)
+	return writeOutput(result, issues, cfg, meta)
 }
 
-func writeOutput(result *analyze.AnalysisResult, issues []analyze.ValidationIssue, cfg *config.Config) error {
+func writeOutput(result *analyze.AnalysisResult, issues []analyze.ValidationIssue, cfg *config.Config, meta render.RenderMetadata) error {
 	var w io.Writer = os.Stdout
 	var outFile *os.File
 	if flagOut != "" {
@@ -214,9 +235,9 @@ func writeOutput(result *analyze.AnalysisResult, issues []analyze.ValidationIssu
 	useJSON := flagJSON || cfg.OutputFormat == "json"
 	var renderErr error
 	if useJSON {
-		renderErr = render.RenderJSON(w, result, issues)
+		renderErr = render.RenderJSON(w, result, issues, meta)
 	} else {
-		renderErr = render.RenderMarkdown(w, result, issues)
+		renderErr = render.RenderMarkdown(w, result, issues, meta)
 	}
 
 	if outFile != nil {
@@ -235,4 +256,24 @@ func collectDiffText(files []collect.ChangedFile) string {
 		sb.WriteString(f.HunkText)
 	}
 	return sb.String()
+}
+
+func resolveTimeout(cmd *cobra.Command, cfg *config.Config) (time.Duration, error) {
+	if cmd.Flags().Changed("timeout") {
+		if flagTimeout < config.MinTimeout || flagTimeout > config.MaxTimeout {
+			return 0, fmt.Errorf("invalid timeout %s: must be between %s and %s", flagTimeout, config.MinTimeout, config.MaxTimeout)
+		}
+		return flagTimeout, nil
+	}
+	return cfg.ResolveTimeout()
+}
+
+func collectTruncatedFileNames(files []collect.ChangedFile) []string {
+	var names []string
+	for _, f := range files {
+		if f.Truncated {
+			names = append(names, f.Path)
+		}
+	}
+	return names
 }

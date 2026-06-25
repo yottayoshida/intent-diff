@@ -22,7 +22,7 @@ func TestRenderMarkdown_GradeA(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	if err := RenderMarkdown(&buf, result, nil); err != nil {
+	if err := RenderMarkdown(&buf, result, nil, RenderMetadata{}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -65,7 +65,7 @@ func TestRenderMarkdown_WithMismatches(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	if err := RenderMarkdown(&buf, result, nil); err != nil {
+	if err := RenderMarkdown(&buf, result, nil, RenderMetadata{}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -91,7 +91,7 @@ func TestRenderMarkdown_ValidationIssues(t *testing.T) {
 	}
 
 	var buf bytes.Buffer
-	if err := RenderMarkdown(&buf, result, issues); err != nil {
+	if err := RenderMarkdown(&buf, result, issues, RenderMetadata{}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -101,5 +101,56 @@ func TestRenderMarkdown_ValidationIssues(t *testing.T) {
 	}
 	if !strings.Contains(out, "Validation Issues") {
 		t.Error("should contain validation issues section")
+	}
+}
+
+func TestRenderMarkdown_PartialWarning(t *testing.T) {
+	result := &analyze.AnalysisResult{
+		Version:   "0.1",
+		Alignment: analyze.Alignment{Grade: "C", Score: 0.45, Confidence: "low"},
+	}
+	meta := RenderMetadata{
+		Truncated:      true,
+		TruncatedFiles: []string{"large_file.go"},
+		ExcludedFiles:  []string{"vendor/lib.go", "generated.go"},
+		FilesAnalyzed:  42,
+		FilesTotal:     58,
+		BudgetChars:    100_000,
+	}
+
+	var buf bytes.Buffer
+	if err := RenderMarkdown(&buf, result, nil, meta); err != nil {
+		t.Fatal(err)
+	}
+
+	out := buf.String()
+	if !strings.Contains(out, "Partial analysis") {
+		t.Error("should contain partial analysis warning")
+	}
+	if !strings.Contains(out, "42 of 58 files") {
+		t.Error("should contain file counts")
+	}
+	if !strings.Contains(out, "100000 chars") {
+		t.Error("should contain budget chars")
+	}
+	if !strings.Contains(out, "max_diff_size") {
+		t.Error("should contain config hint")
+	}
+}
+
+func TestRenderMarkdown_NoPartialWarning(t *testing.T) {
+	result := &analyze.AnalysisResult{
+		Version:   "0.1",
+		Alignment: analyze.Alignment{Grade: "A", Score: 1.0, Confidence: "high"},
+	}
+
+	var buf bytes.Buffer
+	if err := RenderMarkdown(&buf, result, nil, RenderMetadata{}); err != nil {
+		t.Fatal(err)
+	}
+
+	out := buf.String()
+	if strings.Contains(out, "Partial analysis") {
+		t.Error("should not contain partial analysis warning when not truncated")
 	}
 }

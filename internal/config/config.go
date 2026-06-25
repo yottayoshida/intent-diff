@@ -3,9 +3,16 @@ package config
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/gobwas/glob"
 	"go.yaml.in/yaml/v3"
+)
+
+const (
+	DefaultTimeout = 5 * time.Minute
+	MinTimeout     = 30 * time.Second
+	MaxTimeout     = 30 * time.Minute
 )
 
 // Config represents the .intent-diff.yml configuration file.
@@ -13,8 +20,25 @@ type Config struct {
 	Ignore       []string `yaml:"ignore"`
 	MaxDiffSize  int      `yaml:"max_diff_size"`
 	OutputFormat string   `yaml:"output_format"`
+	Timeout      string   `yaml:"timeout"`
 
 	ignoreGlobs []glob.Glob
+}
+
+// ResolveTimeout parses the Timeout string and validates bounds.
+// Returns DefaultTimeout when Timeout is empty.
+func (c *Config) ResolveTimeout() (time.Duration, error) {
+	if c.Timeout == "" {
+		return DefaultTimeout, nil
+	}
+	d, err := time.ParseDuration(c.Timeout)
+	if err != nil {
+		return 0, fmt.Errorf("invalid timeout %q: %w", c.Timeout, err)
+	}
+	if d < MinTimeout || d > MaxTimeout {
+		return 0, fmt.Errorf("timeout %s out of range: must be between %s and %s", d, MinTimeout, MaxTimeout)
+	}
+	return d, nil
 }
 
 // DefaultConfig returns a Config with sensible defaults.

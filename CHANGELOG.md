@@ -2,6 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.2] - 2026-06-25
+
+**Summary**: Large input resilience — partial-analysis warnings, configurable timeout, CI supply-chain hardening, and expanded documentation.
+
+### Added
+
+- Partial-analysis warning in Markdown output when files are excluded by budget truncation or category filtering, showing separate counts for excluded and truncated files
+- `truncated`, `truncated_files`, `excluded_files`, `files_analyzed`, `files_total` fields in JSON output (backward-compatible via `omitempty`)
+- `RenderMetadata` struct separating collect-stage facts from LLM schema
+- `--timeout` CLI flag with configurable analysis timeout (range: 30s–30m, default: 5m)
+- `timeout` field in `.intent-diff.yml` configuration with precedence: CLI flag > config > default
+- 3-layer timeout error messages (what happened, current state, recovery action)
+- Dependabot configuration for automated dependency updates (github-actions weekly, gomod weekly)
+- README sections: How it works, Examples, Configuration (timeout), Troubleshooting, Limitations
+- 15 new tests (96 → 111 total)
+
+### Changed
+
+- All GitHub Actions pinned to immutable commit SHAs (eliminates tag-hijack supply-chain risk)
+- PRD reconciled with v0.1.1 implementation reality (file count, status, technology confirmation)
+
+### Fixed
+
+- Partial-analysis warning now shown when files excluded by category (vendor/generated) even if budget not exceeded
+- Truncated files no longer double-counted as both "analyzed" and "excluded" in warning message
+- Slice backing-array aliasing between `truncationExcluded` and `allExcluded` prevented with explicit allocation
+
 ## [0.1.1] - 2026-06-21
 
 **Summary**: CI runner strategy established — Claude Code CLI as the sole runner for both local and CI environments.
@@ -41,5 +68,6 @@ All notable changes to this project will be documented in this file.
 - Minimal diff shortcut (≤5 lines → Grade A without LLM call)
 - goreleaser configuration for cross-platform binary distribution
 
+[0.1.2]: https://github.com/yottayoshida/intent-diff/releases/tag/v0.1.2
 [0.1.1]: https://github.com/yottayoshida/intent-diff/releases/tag/v0.1.1
 [0.1.0]: https://github.com/yottayoshida/intent-diff/releases/tag/v0.1.0

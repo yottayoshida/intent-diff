@@ -2,10 +2,10 @@ package render
 
 // RenderMetadata carries collect-stage facts to the render stage.
 type RenderMetadata struct {
-	Truncated     bool
+	Truncated      bool
 	TruncatedFiles []string
-	ExcludedFiles []string
-	FilesAnalyzed int
-	FilesTotal    int
-	BudgetChars   int
+	ExcludedFiles  []string
+	FilesAnalyzed  int
+	FilesTotal     int
+	BudgetChars    int
 }

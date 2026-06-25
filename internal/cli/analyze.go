@@ -115,8 +115,8 @@ func runAnalyze(cmd *cobra.Command, args []string) error {
 	files = filtered
 
 	// --- Collect: Truncate ---
-	included, excluded, truncated := collect.TruncateFiles(files, cfg.MaxDiffSize)
-	excluded = append(excluded, ignoredFiles...)
+	included, truncationExcluded, truncated := collect.TruncateFiles(files, cfg.MaxDiffSize)
+	allExcluded := append(truncationExcluded, ignoredFiles...)
 
 	totalAdded, totalDeleted := 0, 0
 	totalDiffChars := 0
@@ -132,7 +132,7 @@ func runAnalyze(cmd *cobra.Command, args []string) error {
 		Files:         included,
 		TotalAdded:    totalAdded,
 		TotalDeleted:  totalDeleted,
-		ExcludedFiles: excluded,
+		ExcludedFiles: allExcluded,
 		Truncated:     truncated,
 		DiffChars:     totalDiffChars,
 		BudgetChars:   cfg.MaxDiffSize,
@@ -148,9 +148,9 @@ func runAnalyze(cmd *cobra.Command, args []string) error {
 	meta := render.RenderMetadata{
 		Truncated:      truncated,
 		TruncatedFiles: collectTruncatedFileNames(included),
-		ExcludedFiles:  excluded,
+		ExcludedFiles:  truncationExcluded,
 		FilesAnalyzed:  len(included),
-		FilesTotal:     len(included) + len(excluded) - len(ignoredFiles),
+		FilesTotal:     len(included) + len(truncationExcluded),
 		BudgetChars:    cfg.MaxDiffSize,
 	}
 

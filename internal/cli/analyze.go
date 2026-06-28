@@ -247,34 +247,64 @@ func runAnalyze(cmd *cobra.Command, args []string) error {
 	return writeOutput(result, issues, cfg, meta)
 }
 
+func resolveOutputMode(cfg *config.Config) string {
+	if flagOutputMode != "" {
+		return flagOutputMode
+	}
+	if cfg.OutputMode != "" {
+		return cfg.OutputMode
+	}
+	if os.Getenv("GITHUB_STEP_SUMMARY") != "" {
+		return "check_summary"
+	}
+	return "local"
+}
+
 func writeOutput(result *analyze.AnalysisResult, issues []analyze.ValidationIssue, cfg *config.Config, meta render.RenderMetadata) error {
-	var w io.Writer = os.Stdout
-	var outFile *os.File
+	mode := resolveOutputMode(cfg)
+
+	if mode == "check_summary" {
+		if err := writeChecksSummary(result, issues, meta); err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to write checks summary: %v\n", err)
+		}
+	}
+
 	if flagOut != "" {
-		f, err := os.Create(flagOut)
-		if err != nil {
-			return fmt.Errorf("create output file: %w", err)
-		}
-		outFile = f
-		w = f
+		return writeToFile(result, issues, meta)
 	}
 
+	if mode == "check_summary" && !flagJSON {
+		return nil
+	}
+
+	var w io.Writer = os.Stdout
 	useJSON := flagJSON || cfg.OutputFormat == "json"
-	var renderErr error
 	if useJSON {
-		renderErr = render.RenderJSON(w, result, issues, meta)
-	} else {
-		renderErr = render.RenderMarkdown(w, result, issues, meta)
+		return render.RenderJSON(w, result, issues, meta)
 	}
+	return render.RenderMarkdown(w, result, issues, meta)
+}
 
-	if outFile != nil {
-		if closeErr := outFile.Close(); closeErr != nil {
-			if renderErr == nil {
-				return fmt.Errorf("close output file: %w", closeErr)
-			}
-		}
+func writeChecksSummary(result *analyze.AnalysisResult, issues []analyze.ValidationIssue, meta render.RenderMetadata) error {
+	summaryPath := os.Getenv("GITHUB_STEP_SUMMARY")
+	if summaryPath == "" {
+		return fmt.Errorf("GITHUB_STEP_SUMMARY not set")
 	}
-	return renderErr
+	f, err := os.OpenFile(summaryPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	if err != nil {
+		return fmt.Errorf("open step summary: %w", err)
+	}
+	defer f.Close()
+	return render.RenderChecksSummary(f, result, issues, meta)
+}
+
+func writeToFile(result *analyze.AnalysisResult, issues []analyze.ValidationIssue, meta render.RenderMetadata) error {
+	f, err := os.Create(flagOut)
+	if err != nil {
+		return fmt.Errorf("create output file: %w", err)
+	}
+	defer f.Close()
+	return render.RenderJSON(f, result, issues, meta)
 }
 
 func collectDiffText(files []collect.ChangedFile) string {

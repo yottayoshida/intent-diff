@@ -63,24 +63,24 @@ const minimalDiffThreshold = 5
 func runAnalyze(cmd *cobra.Command, args []string) error {
 	if cmd.Flags().Changed("config") {
 		if _, err := os.Stat(flagConfig); os.IsNotExist(err) {
-			return fmt.Errorf("config file not found: %s", flagConfig)
+			return exitErrorf(ExitConfig, "config file not found: %s", flagConfig)
 		}
 	}
 
 	cfg, err := config.Load(flagConfig)
 	if err != nil {
-		return fmt.Errorf("load config: %w", err)
+		return exitErrorf(ExitConfig, "load config: %v", err)
 	}
 
 	if cmd.Flags().Changed("output-mode") {
 		if !config.ValidOutputMode(flagOutputMode) {
-			return fmt.Errorf("invalid --output-mode %q: must be one of: local, check_summary", flagOutputMode)
+			return exitErrorf(ExitConfig, "invalid --output-mode %q: must be one of: local, check_summary", flagOutputMode)
 		}
 		cfg.OutputMode = flagOutputMode
 	}
 	if cmd.Flags().Changed("fail-on-grade") {
 		if !config.ValidFailGrade(flagFailOnGrade) {
-			return fmt.Errorf("invalid --fail-on-grade %q: must be one of: C, D, E", flagFailOnGrade)
+			return exitErrorf(ExitConfig, "invalid --fail-on-grade %q: must be one of: C, D, E", flagFailOnGrade)
 		}
 		cfg.Thresholds.FailOnGrade = flagFailOnGrade
 	}
@@ -244,7 +244,16 @@ func runAnalyze(cmd *cobra.Command, args []string) error {
 	}
 	issues := analyze.ValidateResult(result, diffFiles)
 
-	return writeOutput(result, issues, cfg, meta)
+	if err := writeOutput(result, issues, cfg, meta); err != nil {
+		return err
+	}
+
+	if cfg.FailOnGrade(result.Alignment.Grade) {
+		return exitErrorf(ExitAnalysis, "alignment grade %s meets or exceeds threshold %s",
+			result.Alignment.Grade, cfg.Thresholds.FailOnGrade)
+	}
+
+	return nil
 }
 
 func resolveOutputMode(cfg *config.Config) string {

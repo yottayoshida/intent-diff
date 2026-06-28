@@ -386,9 +386,6 @@ func TestLoad_EmptyNested(t *testing.T) {
 			if cfg.Thresholds.FailOnGrade != "" {
 				t.Errorf("expected empty fail_on_grade, got %s", cfg.Thresholds.FailOnGrade)
 			}
-			if !cfg.FailOnGrade("E") {
-				// empty threshold = never fail
-			}
 			if cfg.FailOnGrade("A") {
 				t.Error("empty threshold should never fail")
 			}

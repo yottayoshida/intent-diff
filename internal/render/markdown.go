@@ -61,19 +61,23 @@ func RenderMarkdown(w io.Writer, result *analyze.AnalysisResult, issues []analyz
 	return nil
 }
 
-func renderGradeBadge(w io.Writer, a analyze.Alignment) {
-	gradeDesc := map[string]string{
+// GradeDescription returns a human-readable label for a grade letter.
+func GradeDescription(grade string) string {
+	desc := map[string]string{
 		"A": "Well-aligned",
 		"B": "Minor omissions",
 		"C": "Material omissions",
 		"D": "Significant mismatches",
 		"E": "Critical mismatches",
 	}
-	desc := gradeDesc[a.Grade]
-	if desc == "" {
-		desc = "Unknown"
+	if d, ok := desc[grade]; ok {
+		return d
 	}
+	return "Unknown"
+}
 
+func renderGradeBadge(w io.Writer, a analyze.Alignment) {
+	desc := GradeDescription(a.Grade)
 	fmt.Fprintf(w, "**Grade: %s** — %s (confidence: %s, score: %.2f)\n",
 		a.Grade, desc, a.Confidence, a.Score)
 

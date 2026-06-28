@@ -16,7 +16,7 @@ const maxAttentionItems = 5
 // Layer 3: Mismatches with <details> folding (only for C-E)
 func RenderChecksSummary(w io.Writer, result *analyze.AnalysisResult, issues []analyze.ValidationIssue, meta RenderMetadata) error {
 	grade := result.Alignment.Grade
-	gradeDesc := gradeDescription(grade)
+	gradeDesc := GradeDescription(grade)
 
 	fmt.Fprintf(w, "## Intent Diff: Grade %s — %s\n", grade, gradeDesc)
 
@@ -58,20 +58,6 @@ func RenderChecksSummary(w io.Writer, result *analyze.AnalysisResult, issues []a
 
 func isCleanGrade(grade string) bool {
 	return grade == "A" || grade == "B"
-}
-
-func gradeDescription(grade string) string {
-	desc := map[string]string{
-		"A": "Well-aligned",
-		"B": "Minor omissions",
-		"C": "Material omissions",
-		"D": "Significant mismatches",
-		"E": "Critical mismatches",
-	}
-	if d, ok := desc[grade]; ok {
-		return d
-	}
-	return "Unknown"
 }
 
 func renderAttentionMapCompact(w io.Writer, items []analyze.AttentionItem) {

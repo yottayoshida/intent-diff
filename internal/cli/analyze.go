@@ -270,7 +270,8 @@ func writeOutput(result *analyze.AnalysisResult, issues []analyze.ValidationIssu
 	}
 
 	if flagOut != "" {
-		return writeToFile(result, issues, meta)
+		useJSON := flagJSON || cfg.OutputFormat == "json"
+		return writeToFile(result, issues, meta, useJSON)
 	}
 
 	if mode == "check_summary" && !flagJSON {
@@ -298,13 +299,16 @@ func writeChecksSummary(result *analyze.AnalysisResult, issues []analyze.Validat
 	return render.RenderChecksSummary(f, result, issues, meta)
 }
 
-func writeToFile(result *analyze.AnalysisResult, issues []analyze.ValidationIssue, meta render.RenderMetadata) error {
+func writeToFile(result *analyze.AnalysisResult, issues []analyze.ValidationIssue, meta render.RenderMetadata, useJSON bool) error {
 	f, err := os.Create(flagOut)
 	if err != nil {
 		return fmt.Errorf("create output file: %w", err)
 	}
 	defer f.Close()
-	return render.RenderJSON(f, result, issues, meta)
+	if useJSON {
+		return render.RenderJSON(f, result, issues, meta)
+	}
+	return render.RenderMarkdown(f, result, issues, meta)
 }
 
 func collectDiffText(files []collect.ChangedFile) string {

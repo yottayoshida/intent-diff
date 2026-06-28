@@ -30,6 +30,9 @@ var (
 	flagIntent      string
 	flagPRJSON      string
 	flagOut         string
+	flagConfig      string
+	flagOutputMode  string
+	flagFailOnGrade string
 	flagTimeout     time.Duration
 	flagJSON        bool
 	flagForce       bool
@@ -45,6 +48,9 @@ func init() {
 	analyzeCmd.Flags().StringVar(&flagIntent, "intent", "", "path to a PR description markdown file")
 	analyzeCmd.Flags().StringVar(&flagPRJSON, "pr-json", "", "path to gh pr view --json title,body output")
 	analyzeCmd.Flags().StringVar(&flagOut, "out", "", "output file path (default: stdout)")
+	analyzeCmd.Flags().StringVar(&flagConfig, "config", ".intent-diff.yml", "path to config file")
+	analyzeCmd.Flags().StringVar(&flagOutputMode, "output-mode", "", "output destination: local, check_summary (default: auto-detect)")
+	analyzeCmd.Flags().StringVar(&flagFailOnGrade, "fail-on-grade", "", "exit 1 if alignment grade is at or below this threshold (C, D, or E)")
 	analyzeCmd.Flags().BoolVar(&flagJSON, "json", false, "output as JSON instead of Markdown")
 	analyzeCmd.Flags().BoolVar(&flagForce, "force", false, "force LLM analysis even for minimal diffs")
 	analyzeCmd.Flags().DurationVar(&flagTimeout, "timeout", config.DefaultTimeout, "analysis timeout (e.g. 2m, 10m); range: 30s-30m")
@@ -55,9 +61,16 @@ func init() {
 const minimalDiffThreshold = 5
 
 func runAnalyze(cmd *cobra.Command, args []string) error {
-	cfg, err := config.Load(".intent-diff.yml")
+	cfg, err := config.Load(flagConfig)
 	if err != nil {
 		return fmt.Errorf("load config: %w", err)
+	}
+
+	if cmd.Flags().Changed("output-mode") {
+		cfg.OutputMode = flagOutputMode
+	}
+	if cmd.Flags().Changed("fail-on-grade") {
+		cfg.Thresholds.FailOnGrade = flagFailOnGrade
 	}
 
 	// --- Collect: Diff ---

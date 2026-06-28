@@ -59,3 +59,36 @@ func TestParseDiffFromReader_Empty(t *testing.T) {
 		t.Errorf("expected 0 files for empty diff, got %d", len(files))
 	}
 }
+
+func TestValidateRef(t *testing.T) {
+	tests := []struct {
+		ref     string
+		wantErr bool
+	}{
+		{"", false},
+		{"HEAD", false},
+		{"main", false},
+		{"abc123def", false},
+		{"refs/heads/feature/foo", false},
+		{"v0.1.0", false},
+		{"HEAD~3", false},
+		{"HEAD^2", false},
+		{"origin/main", false},
+		{"-flag", true},
+		{"ref with space", true},
+		{"ref;inject", true},
+		{"ref|pipe", true},
+		{"ref$(cmd)", true},
+		{"ref`cmd`", true},
+		{"ref&bg", true},
+		{"ref\nnewline", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.ref, func(t *testing.T) {
+			err := validateRef(tt.ref)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("validateRef(%q) error = %v, wantErr %v", tt.ref, err, tt.wantErr)
+			}
+		})
+	}
+}

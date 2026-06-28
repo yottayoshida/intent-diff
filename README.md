@@ -1,5 +1,7 @@
 # Intent Diff
 
+> **Note:** This project is no longer actively maintained. It works as-is but no new features or fixes are planned.
+
 > Compare what a PR says it does with what the diff actually changes.
 
 Intent Diff extracts claimed intent from a PR description and compares it with implementation evidence from the git diff. It produces a structured mismatch report with a Grade A–E scale and an attention map, helping reviewers decide where to focus before reading every changed line.

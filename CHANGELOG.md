@@ -2,6 +2,35 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.3] - 2026-06-28
+
+**Summary**: GitHub Action foundation — composite action, Checks summary renderer, output mode routing, exit code routing, and config schema extension for Phase 1 features.
+
+### Added
+
+- `action.yml` composite GitHub Action for PR workflows with `pull_request` event support
+- `RenderChecksSummary` renderer with 3-layer compact layout (Grade → Attention Map max 5 → Mismatches with `<details>` folding)
+- Output mode routing: `--output-mode` CLI flag > `output_mode` config > `GITHUB_STEP_SUMMARY` env auto-detection > `"local"` default
+- `ExitError` type with distinct exit codes: 0 (success), 1 (analysis/threshold), 2 (config error)
+- `FailOnGrade` integration: exit 1 when alignment grade meets or exceeds `thresholds.fail_on_grade` threshold
+- Config Phase 1 fields: `output_mode`, `risk_paths`, `protected_claims`, `thresholds.fail_on_grade`, `redaction.patterns`
+- `Validate()` method with enum checking, glob/regex compilation, BOM strip, trailing whitespace trimming
+- `--config` CLI flag for config file path override (errors on missing file when explicitly set)
+- `--fail-on-grade` CLI flag (C, D, or E threshold)
+- Fork PR graceful skip in action.yml (exit 0 when `ANTHROPIC_API_KEY` not set)
+- Soft-fail logic in action.yml: analysis errors exit 0 by default, config errors always exit 2
+- `validateRef()` allowlist (alphanumeric + `._/~^-`) replacing simple prefix check
+- `verifyRef()` fetch-depth guard for both base and head refs
+- `ValidOutputMode()` and `ValidFailGrade()` exported helpers
+- Golden file tests for Checks summary (clean + mismatch outputs)
+- 71 new tests (111 → 182 total)
+
+### Changed
+
+- Config errors (YAML parse failure, invalid enums, missing `--config` file) now exit 2 instead of 1
+- `GradeDescription()` extracted as shared function (was duplicated between renderers)
+- `writeToFile()` now respects `--json` / `output_format` instead of always writing JSON
+
 ## [0.1.2] - 2026-06-25
 
 **Summary**: Large input resilience — partial-analysis warnings, configurable timeout, CI supply-chain hardening, and expanded documentation.
@@ -68,6 +97,7 @@ All notable changes to this project will be documented in this file.
 - Minimal diff shortcut (≤5 lines → Grade A without LLM call)
 - goreleaser configuration for cross-platform binary distribution
 
+[0.1.3]: https://github.com/yottayoshida/intent-diff/releases/tag/v0.1.3
 [0.1.2]: https://github.com/yottayoshida/intent-diff/releases/tag/v0.1.2
 [0.1.1]: https://github.com/yottayoshida/intent-diff/releases/tag/v0.1.1
 [0.1.0]: https://github.com/yottayoshida/intent-diff/releases/tag/v0.1.0

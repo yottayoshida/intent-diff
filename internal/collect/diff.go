@@ -48,6 +48,11 @@ func ParseDiffFromGit(base, head string) ([]*gitdiff.File, error) {
 	if err := verifyRef(base); err != nil {
 		return nil, fmt.Errorf("base commit %s not found: %w\nEnsure actions/checkout uses fetch-depth: 0", base, err)
 	}
+	if head != "HEAD" {
+		if err := verifyRef(head); err != nil {
+			return nil, fmt.Errorf("head commit %s not found: %w\nEnsure actions/checkout uses fetch-depth: 0", head, err)
+		}
+	}
 
 	cmd := exec.Command("git", "diff", base+".."+head)
 	out, err := cmd.Output()

@@ -544,6 +544,36 @@ func TestFailOnGrade(t *testing.T) {
 	}
 }
 
+func TestValidOutputMode(t *testing.T) {
+	valid := []string{"", "local", "check_summary"}
+	for _, v := range valid {
+		if !ValidOutputMode(v) {
+			t.Errorf("ValidOutputMode(%q) = false, want true", v)
+		}
+	}
+	invalid := []string{"invalid", "LOCAL", "check-summary", "stdout"}
+	for _, v := range invalid {
+		if ValidOutputMode(v) {
+			t.Errorf("ValidOutputMode(%q) = true, want false", v)
+		}
+	}
+}
+
+func TestValidFailGrade(t *testing.T) {
+	valid := []string{"", "C", "D", "E"}
+	for _, v := range valid {
+		if !ValidFailGrade(v) {
+			t.Errorf("ValidFailGrade(%q) = false, want true", v)
+		}
+	}
+	invalid := []string{"A", "B", "F", "c", "INVALID"}
+	for _, v := range invalid {
+		if ValidFailGrade(v) {
+			t.Errorf("ValidFailGrade(%q) = true, want false", v)
+		}
+	}
+}
+
 func TestLoad_BackwardCompat_V01Configs(t *testing.T) {
 	tests := []struct {
 		name    string

@@ -43,7 +43,8 @@ runs:
       shell: bash
       env:
         CLAUDE_CODE_ACCEPT_TOS: '1'
-      run: npm install -g @anthropic-ai/claude-code@${{ inputs.claude-code-version }}
+        CLAUDE_CODE_VERSION: ${{ inputs.claude-code-version }}
+      run: npm install -g @anthropic-ai/claude-code@"$CLAUDE_CODE_VERSION"
 
     - name: Setup Go
       uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
@@ -53,12 +54,13 @@ runs:
 
     - name: Install intent-diff
       shell: bash
+      env:
+        INTENT_DIFF_VERSION: ${{ inputs.version }}
       run: |
-        VERSION="${{ inputs.version }}"
-        if [ "$VERSION" = "latest" ]; then
+        if [ "$INTENT_DIFF_VERSION" = "latest" ]; then
           go install github.com/yottayoshida/intent-diff/cmd/intent-diff@latest
         else
-          go install github.com/yottayoshida/intent-diff/cmd/intent-diff@"$VERSION"
+          go install github.com/yottayoshida/intent-diff/cmd/intent-diff@"$INTENT_DIFF_VERSION"
         fi
 
     - name: Collect PR metadata
@@ -83,7 +85,14 @@ runs:
       env:
         ANTHROPIC_API_KEY: ${{ env.ANTHROPIC_API_KEY }}
         CLAUDE_CODE_ACCEPT_TOS: '1'
+        CONFIG_PATH: ${{ inputs.config-path }}
+        SOFT_FAIL: ${{ inputs.soft-fail }}
       run: |
+        if [ -z "$ANTHROPIC_API_KEY" ]; then
+          echo "::notice::Intent Diff skipped: ANTHROPIC_API_KEY not configured (expected for fork PRs)"
+          exit 0
+        fi
+
         BASE_SHA="${{ github.event.pull_request.base.sha }}"
         HEAD_SHA="${{ github.event.pull_request.head.sha }}"
         REPORT_JSON="/tmp/intent-diff-report.json"
@@ -91,7 +100,7 @@ runs:
         intent-diff analyze \
           --pr-json /tmp/intent-diff-pr.json \
           --base "$BASE_SHA" --head "$HEAD_SHA" \
-          --config "${{ inputs.config-path }}" \
+          --config "$CONFIG_PATH" \
           --json --out "$REPORT_JSON" \
           2>&1 || EXIT_CODE=$?
 
@@ -106,4 +115,16 @@ runs:
           echo "report-json=$REPORT_JSON" >> "$GITHUB_OUTPUT"
         fi
 
-        exit "${EXIT_CODE:-0}"
+        if [ "${EXIT_CODE:-0}" -eq 0 ]; then
+          exit 0
+        elif [ "${EXIT_CODE}" -eq 2 ]; then
+          exit 2
+        elif [ -f "$REPORT_JSON" ]; then
+          exit 1
+        elif [ "$SOFT_FAIL" = "true" ]; then
+          echo "## Intent Diff: Analysis incomplete" >> "$GITHUB_STEP_SUMMARY"
+          echo "> Analysis failed. This does not affect your PR." >> "$GITHUB_STEP_SUMMARY"
+          exit 0
+        else
+          exit 1
+        fi

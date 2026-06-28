@@ -174,6 +174,9 @@ var validOutputModes = map[string]bool{"": true, "local": true, "check_summary":
 var validOutputFormats = map[string]bool{"markdown": true, "json": true, "": true}
 var validFailGrades = map[string]bool{"": true, "C": true, "D": true, "E": true}
 
+func ValidOutputMode(v string) bool { return validOutputModes[v] }
+func ValidFailGrade(v string) bool  { return validFailGrades[v] }
+
 func (c *Config) validate() error {
 	c.OutputMode = strings.TrimSpace(c.OutputMode)
 	if !validOutputModes[c.OutputMode] {

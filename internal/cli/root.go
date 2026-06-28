@@ -21,10 +21,6 @@ type ExitError struct {
 func (e *ExitError) Error() string { return e.Err.Error() }
 func (e *ExitError) Unwrap() error { return e.Err }
 
-func exitError(code int, msg string) *ExitError {
-	return &ExitError{Code: code, Err: fmt.Errorf("%s", msg)}
-}
-
 func exitErrorf(code int, format string, args ...any) *ExitError {
 	return &ExitError{Code: code, Err: fmt.Errorf(format, args...)}
 }

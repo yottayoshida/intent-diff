@@ -82,6 +82,58 @@ Refactor auth middleware for readability
 * **Prompt injection defense** — XML data boundaries, `--json-schema` enforcement, post-hoc file path validation
 * **Configurable timeout** — `--timeout` flag and config file support with 30s–30min bounds
 
+## GitHub Action
+
+Add intent-diff to your PR workflow in two steps:
+
+1. Add `ANTHROPIC_API_KEY` to your repository secrets
+2. Add the workflow:
+
+```yaml
+name: Intent Diff
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  intent-diff:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Required for intent-diff
+
+      - uses: yottayoshida/intent-diff@v0
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+```
+
+### Action inputs
+
+| Input | Default | Description |
+|-------|---------|-------------|
+| `config-path` | `.intent-diff.yml` | Path to config file |
+| `version` | `latest` | intent-diff version to install (e.g. `v0.1.3`) |
+| `claude-code-version` | `1` | Claude Code CLI version |
+| `soft-fail` | `true` | Exit 0 on analysis errors. Grade threshold failures always exit 1 |
+
+### Action outputs
+
+| Output | Description |
+|--------|-------------|
+| `grade` | Alignment grade (A–E) |
+| `score` | Alignment score (0–1) |
+| `has-mismatches` | `"true"` if mismatches were detected |
+| `report-json` | Path to JSON report file |
+
+### Fork PRs
+
+Fork PRs do not have access to repository secrets. When `ANTHROPIC_API_KEY` is not set, the action skips analysis and exits 0. Use the `pull_request` event only — `pull_request_target` is not recommended as it exposes secrets to fork code.
+
 ## Configuration
 
 Create `.intent-diff.yml` in your project root:
@@ -93,6 +145,19 @@ ignore:
 max_diff_size: 100000
 output_format: markdown
 timeout: "5m"
+output_mode: check_summary
+risk_paths:
+  auth:
+    - "internal/auth/**"
+  api:
+    - "api/v2/**"
+protected_claims:
+  - "backward compatible"
+thresholds:
+  fail_on_grade: "D"
+redaction:
+  patterns:
+    - "sk-[a-zA-Z0-9]{32,}"
 ```
 
 | Key | Type | Default | Description |
@@ -101,8 +166,15 @@ timeout: "5m"
 | `max_diff_size` | `int` | `100000` | Maximum diff size in characters |
 | `output_format` | `string` | `"markdown"` | `"markdown"` or `"json"` |
 | `timeout` | `string` | `"5m"` | Analysis timeout (e.g. `"2m"`, `"10m"`); range: 30s–30m |
+| `output_mode` | `string` | `"local"` | Output destination: `"local"` or `"check_summary"` |
+| `risk_paths` | `map[string][]string` | `{}` | Custom risk categories with glob patterns |
+| `protected_claims` | `[]string` | `[]` | PR description claims to flag when contradicted |
+| `thresholds.fail_on_grade` | `string` | `""` | Exit 1 if grade is at or below threshold (`"C"`, `"D"`, or `"E"`) |
+| `redaction.patterns` | `[]string` | `[]` | Regex patterns to redact from diff before LLM analysis |
 
-The `--timeout` CLI flag overrides the config file value.
+All config fields are optional. Existing `.intent-diff.yml` files with only v0.1 fields continue to work unchanged.
+
+CLI flags `--config`, `--output-mode`, and `--fail-on-grade` override the corresponding config file values.
 
 ## Troubleshooting
 

@@ -5,10 +5,13 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 
 	"github.com/bluekeyes/go-gitdiff/gitdiff"
 )
+
+var validRefPattern = regexp.MustCompile(`^[a-zA-Z0-9._/~^-]+$`)
 
 // ParseDiffFromFile reads a unified diff from a file path.
 func ParseDiffFromFile(path string) ([]*gitdiff.File, error) {
@@ -42,6 +45,15 @@ func ParseDiffFromGit(base, head string) ([]*gitdiff.File, error) {
 		base = mb
 	}
 
+	if err := verifyRef(base); err != nil {
+		return nil, fmt.Errorf("base commit %s not found: %w\nEnsure actions/checkout uses fetch-depth: 0", base, err)
+	}
+	if head != "HEAD" {
+		if err := verifyRef(head); err != nil {
+			return nil, fmt.Errorf("head commit %s not found: %w\nEnsure actions/checkout uses fetch-depth: 0", head, err)
+		}
+	}
+
 	cmd := exec.Command("git", "diff", base+".."+head)
 	out, err := cmd.Output()
 	if err != nil {
@@ -52,8 +64,14 @@ func ParseDiffFromGit(base, head string) ([]*gitdiff.File, error) {
 }
 
 func validateRef(ref string) error {
-	if ref != "" && strings.HasPrefix(ref, "-") {
+	if ref == "" {
+		return nil
+	}
+	if strings.HasPrefix(ref, "-") {
 		return fmt.Errorf("ref %q must not start with '-'", ref)
+	}
+	if !validRefPattern.MatchString(ref) {
+		return fmt.Errorf("ref %q contains invalid characters: only alphanumeric, '.', '_', '/', '~', '^', '-' are allowed", ref)
 	}
 	return nil
 }
@@ -69,6 +87,14 @@ func mergeBase(head string) (string, error) {
 		}
 	}
 	return strings.TrimSpace(string(out)), nil
+}
+
+func verifyRef(ref string) error {
+	cmd := exec.Command("git", "rev-parse", "--verify", ref)
+	if err := cmd.Run(); err != nil {
+		return err
+	}
+	return nil
 }
 
 func parseDiff(r io.Reader) ([]*gitdiff.File, error) {

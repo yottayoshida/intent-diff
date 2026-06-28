@@ -29,6 +29,7 @@ func TestExitError_Unwrap(t *testing.T) {
 func TestResolveOutputMode_EnvAutoDetect(t *testing.T) {
 	cfg := &config.Config{}
 
+	t.Setenv("GITHUB_STEP_SUMMARY", "")
 	flagOutputMode = ""
 	mode := resolveOutputMode(cfg)
 	if mode != "local" {

@@ -6,7 +6,7 @@
 
 Intent Diff extracts claimed intent from a PR description and compares it with implementation evidence from the git diff. It produces a structured mismatch report with a Grade A–E scale and an attention map, helping reviewers decide where to focus before reading every changed line.
 
-## How it works 
+## How it works
 
 Intent Diff runs a 3-stage pipeline:
 
